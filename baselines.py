@@ -5,10 +5,15 @@ Created on Fri Jun 26 11:57:27 2015
 @author: Balázs Hidasi
 """
 
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+from itertools import izip
+
 import numpy as np
 import pandas as pd
 
-class RandomPred:
+class RandomPred(object):
     '''
     RandomPred()
     
@@ -49,7 +54,7 @@ class RandomPred:
         '''
         return pd.Series(data=np.random.rand(len(predict_for_item_ids)), index=predict_for_item_ids)
 
-class Pop:
+class Pop(object):
     '''
     Pop(top_n=100, item_key='ItemId', support_by_key=None)
     
@@ -117,7 +122,7 @@ class Pop:
         preds[mask] = self.pop_list[predict_for_item_ids[mask]]
         return pd.Series(data=preds, index=predict_for_item_ids)
         
-class SessionPop:
+class SessionPop(object):
     '''
     SessionPop(top_n=100, item_key='ItemId', support_by_key=None)
     
@@ -196,7 +201,7 @@ class SessionPop:
         preds[mask] += ser[predict_for_item_ids[mask]]
         return pd.Series(data=preds, index=predict_for_item_ids)
  
-class ItemKNN:
+class ItemKNN(object):
     '''
     ItemKNN(n_sims = 100, lmbd = 20, alpha = 0.5, session_key = 'SessionId', item_key = 'ItemId', time_key = 'Time')
     
@@ -258,7 +263,7 @@ class ItemKNN:
         item_offsets[1:] = supp.cumsum()
         index_by_items = data.sort_values(['ItemIdx', self.time_key]).index.values
         self.sims = dict()
-        for i in range(n_items):
+        for i in xrange(n_items):
             iarray = np.zeros(n_items)
             start = item_offsets[i]
             end = item_offsets[i+1]
@@ -300,7 +305,7 @@ class ItemKNN:
         preds[mask] = sim_list[predict_for_item_ids[mask]]
         return pd.Series(data=preds, index=predict_for_item_ids)
 
-class BPR:
+class BPR(object):
     '''
     BPR(n_factors = 100, n_iterations = 10, learning_rate = 0.01, lambda_session = 0.0, lambda_item = 0.0, sigma = 0.05, init_normal = False, session_key = 'SessionId', item_key = 'ItemId')
     
@@ -376,7 +381,7 @@ class BPR:
         data = pd.merge(data, pd.DataFrame({self.item_key:itemids, 'ItemIdx':np.arange(self.n_items)}), on=self.item_key, how='inner')
         data = pd.merge(data, pd.DataFrame({self.session_key:sessionids, 'SessionIdx':np.arange(self.n_sessions)}), on=self.session_key, how='inner')     
         self.init(data)
-        for it in range(self.n_iterations):
+        for it in xrange(self.n_iterations):
             c = []
             for e in np.random.permutation(len(data)):
                 uidx = data.SessionIdx.values[e]

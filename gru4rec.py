@@ -4,6 +4,11 @@ Created on Mon Jun 22 15:14:20 2015
 @author: Balázs Hidasi
 """
 
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+from itertools import izip
+
 import theano
 from theano import tensor as T
 from theano import function
@@ -12,7 +17,7 @@ import numpy as np
 import pandas as pd
 from collections import OrderedDict
 srng = RandomStreams()
-class GRU4Rec:
+class GRU4Rec(object):
     '''
     GRU4Rec(layers, n_epochs=10, batch_size=50, dropout_p_hidden=0.5, learning_rate=0.05, momentum=0.0, adapt='adagrad', decay=0.9, grad_cap=0, sigma=0, init_as_normal=False, reset_after_session=True, loss='top1', hidden_act='tanh', final_act=None, train_random_order=False, lmbd=0.0, session_key='SessionId', item_key='ItemId', time_key='Time')
     Initializes the network.
@@ -166,7 +171,7 @@ class GRU4Rec:
         offset_sessions[1:] = data.groupby(self.session_key).size().cumsum()
         np.random.seed(42)
         self.Wx, self.Wh, self.Wrz, self.Bh, self.H = [], [], [], [], []
-        for i in range(len(self.layers)):
+        for i in xrange(len(self.layers)):
             m = []
             m.append(self.init_matrix((self.layers[i-1] if i > 0 else self.n_items, self.layers[i])))
             m.append(self.init_matrix((self.layers[i-1] if i > 0 else self.n_items, self.layers[i])))
@@ -265,8 +270,8 @@ class GRU4Rec:
             norm=T.cast(T.sqrt(T.sum([T.sum([T.sum(g**2) for g in g_list]) for g_list in grads]) + T.sum([T.sum(g**2) for g in sgrads])), theano.config.floatX)
             grads = [[T.switch(T.ge(norm, self.grad_cap), g*self.grad_cap/norm, g) for g in g_list] for g_list in grads]
             sgrads = [T.switch(T.ge(norm, self.grad_cap), g*self.grad_cap/norm, g) for g in sgrads]
-        for p_list, g_list in zip(params, grads):
-            for p, g in zip(p_list, g_list):
+        for p_list, g_list in izip(params, grads):
+            for p, g in izip(p_list, g_list):
                 if self.adapt:
                     if self.adapt == 'adagrad':
                         g = self.adagrad(p, g, updates)
@@ -283,7 +288,7 @@ class GRU4Rec:
                     updates[p] = p + velocity2
                 else:
                     updates[p] = p * np.float32(1.0 - self.learning_rate * self.lmbd) - np.float32(self.learning_rate) * g
-        for i in range(len(sgrads)):
+        for i in xrange(len(sgrads)):
             g = sgrads[i]
             fullP = full_params[i]
             sample_idx = sidxs[i]
@@ -320,7 +325,7 @@ class GRU4Rec:
         h = self.dropout(h, drop_p_hidden)
         H_new = [h]
         y = h
-        for i in range(1, len(self.layers)):
+        for i in xrange(1, len(self.layers)):
             vec = T.dot(y, self.Wx[i]) + self.Bh[i]
             rz = T.nnet.sigmoid(vec.T[self.layers[i]:] + T.dot(H[i], self.Wrz[i]).T)
             h = self.hidden_activation(T.dot(H[i] * rz[:self.layers[i]].T, self.Wh[i]) + vec.T[:self.layers[i]].T) #CHK
@@ -380,11 +385,11 @@ class GRU4Rec:
         full_params = [self.Wx[0], self.Wy, self.By]
         sidxs = [X, Y, Y]
         updates = self.RMSprop(cost, params, full_params, sampled_params, sidxs)
-        for i in range(len(self.H)):
+        for i in xrange(len(self.H)):
             updates[self.H[i]] = H_new[i]
         train_function = function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True)
-        for epoch in range(self.n_epochs):
-            for i in range(len(self.layers)):
+        for epoch in xrange(self.n_epochs):
+            for i in xrange(len(self.layers)):
                 self.H[i].set_value(np.zeros((self.batch_size,self.layers[i]), dtype=theano.config.floatX), borrow=True)
             c = []
             session_idx_arr = np.random.permutation(len(offset_sessions)-1) if self.train_random_order else np.arange(len(offset_sessions)-1)
@@ -396,7 +401,7 @@ class GRU4Rec:
             while not finished:
                 minlen = (end-start).min()
                 out_idx = data.ItemIdx.values[start]
-                for i in range(minlen-1):
+                for i in xrange(minlen-1):
                     in_idx = out_idx
                     out_idx = data.ItemIdx.values[start+i+1]
                     y = out_idx
@@ -414,7 +419,7 @@ class GRU4Rec:
                         finished = True
                         break
                     if self.reset_after_session:
-                        for i in range(len(self.H)):
+                        for i in xrange(len(self.H)):
                             tmp = self.H[i].get_value(borrow=True, return_internal_type=True)
                             tmp[idx,:] = 0
                             self.H[i].set_value(tmp, borrow=True)
@@ -456,14 +461,14 @@ class GRU4Rec:
         if self.predict is None or self.predict_batch!=batch:
             X = T.ivector()
             Y = T.ivector()
-            for i in range(len(self.layers)):
+            for i in xrange(len(self.layers)):
                 self.H[i].set_value(np.zeros((batch,self.layers[i]), dtype=theano.config.floatX), borrow=True)
             if predict_for_item_ids is not None:
                 H_new, yhat, _ = self.model(X, self.H, Y)
             else:
                 H_new, yhat, _ = self.model(X, self.H)
             updatesH = OrderedDict()
-            for i in range(len(self.H)):
+            for i in xrange(len(self.H)):
                 updatesH[self.H[i]] = H_new[i]
             if predict_for_item_ids is not None:
                 self.predict = function(inputs=[X, Y], outputs=yhat, updates=updatesH, allow_input_downcast=True)
@@ -473,7 +478,7 @@ class GRU4Rec:
             self.predict_batch = batch
         session_change = np.arange(batch)[session_ids != self.current_session]
         if len(session_change) > 0:
-            for i in range(len(self.H)):
+            for i in xrange(len(self.H)):
                 tmp = self.H[i].get_value(borrow=True)
                 tmp[session_change] = 0
                 self.H[i].set_value(tmp, borrow=True)

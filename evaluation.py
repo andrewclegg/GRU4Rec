@@ -5,6 +5,11 @@ Created on Fri Jun 26 17:27:26 2015
 @author: Balázs Hidasi
 """
 
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+from itertools import izip
+
 import numpy as np
 import pandas as pd
 
@@ -63,7 +68,7 @@ def evaluate_sessions_batch(pr, test_data, items=None, cut_off=20, batch_size=10
         start_valid = start[valid_mask]
         minlen = (end[valid_mask]-start_valid).min()
         in_idx[valid_mask] = test_data[item_key].values[start_valid]
-        for i in range(minlen-1):
+        for i in xrange(minlen-1):
             out_idx = test_data[item_key].values[start_valid+i+1]
             if items is not None:
                 uniq_out = np.unique(np.array(out_idx, dtype=np.int32))
@@ -131,7 +136,7 @@ def evaluate_sessions(pr, test_data, train_data, items=None, cut_off=20, session
     evalutation_point_count = 0
     prev_iid, prev_sid = -1, -1
     mrr, recall = 0.0, 0.0
-    for i in range(len(test_data)):
+    for i in xrange(len(test_data)):
         sid = test_data[session_key].values[i]
         iid = test_data[item_key].values[i]
         if prev_sid != sid:
